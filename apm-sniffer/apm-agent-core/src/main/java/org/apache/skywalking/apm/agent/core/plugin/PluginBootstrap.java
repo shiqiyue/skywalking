@@ -38,12 +38,13 @@ public class PluginBootstrap {
 
     /**
      * load all plugins.
-     *
+     * 加载所有插件
      * @return plugin definition list.
      */
     public List<AbstractClassEnhancePluginDefine> loadPlugins() throws AgentPackageNotFoundException {
+        // 初始化AgentClassLoader
         AgentClassLoader.initDefaultLoader();
-
+        // 解析可用的插件
         PluginResourcesResolver resolver = new PluginResourcesResolver();
         List<URL> resources = resolver.getResources();
 
@@ -76,7 +77,7 @@ public class PluginBootstrap {
                 logger.error(t, "load plugin [{}] failure.", pluginDefine.getDefineClass());
             }
         }
-
+        // TODO 不知道干啥用的
         plugins.addAll(DynamicPluginLoader.INSTANCE.load(AgentClassLoader.getDefault()));
 
         return plugins;

@@ -42,7 +42,7 @@ import org.apache.skywalking.apm.agent.core.plugin.PluginBootstrap;
 /**
  * The <code>AgentClassLoader</code> represents a classloader,
  * which is in charge of finding plugins and interceptors.
- *
+ * 负责加载插件和拦截器
  * @author wusheng
  */
 public class AgentClassLoader extends ClassLoader {

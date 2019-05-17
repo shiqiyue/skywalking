@@ -28,7 +28,7 @@ import org.apache.skywalking.apm.agent.core.plugin.interceptor.ConstructorInterc
  * override {@link ClassEnhancePluginDefine#getConstructorsInterceptPoints} and {@link
  * ClassEnhancePluginDefine#getInstanceMethodsInterceptPoints}, and return NULL, which means nothing to
  * enhance.
- *
+ * 只增加静态方法
  * @author wusheng
  */
 public abstract class ClassStaticMethodsEnhancePluginDefine extends ClassEnhancePluginDefine {

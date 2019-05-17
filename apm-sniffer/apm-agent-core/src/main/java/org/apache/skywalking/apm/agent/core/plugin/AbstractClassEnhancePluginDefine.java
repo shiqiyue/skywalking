@@ -39,9 +39,9 @@ public abstract class AbstractClassEnhancePluginDefine {
     /**
      * Main entrance of enhancing the class.
      *
-     * @param typeDescription target class description.
+     * @param typeDescription target class description. 目标类的描述信息
      * @param builder byte-buddy's builder to manipulate target class's bytecode.
-     * @param classLoader load the given transformClass
+     * @param classLoader load the given transformClass  加载给定的需要转换的类
      * @return the new builder, or <code>null</code> if not be enhanced.
      * @throws PluginException when set builder failure.
      */

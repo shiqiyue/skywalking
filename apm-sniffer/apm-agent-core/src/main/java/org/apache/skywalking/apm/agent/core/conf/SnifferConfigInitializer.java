@@ -39,14 +39,27 @@ import org.apache.skywalking.apm.util.StringUtil;
 
 /**
  * The <code>SnifferConfigInitializer</code> initializes all configs in several way.
+ * 嗅探器配置初始器；初始化所有的配置，支持多种方式
  *
  * @author wusheng
  */
 public class SnifferConfigInitializer {
     private static final ILog logger = LogManager.getLogger(SnifferConfigInitializer.class);
+    /***
+     * 配置项名称-配置文件路径
+     */
     private static String SPECIFIED_CONFIG_PATH = "skywalking_config";
+    /***
+     * 默认的配置文件名
+     */
     private static String DEFAULT_CONFIG_FILE_NAME = "/config/agent.config";
+    /***
+     * skywalking 环境变量前缀
+     */
     private static String ENV_KEY_PREFIX = "skywalking.";
+    /***
+     * 是否初始化完成
+     */
     private static boolean IS_INIT_COMPLETED = false;
 
     /**
@@ -72,12 +85,14 @@ public class SnifferConfigInitializer {
                 //replace the key's value. properties.replace(key,value) in jdk8+
                 properties.put(key, PropertyPlaceholderHelper.INSTANCE.replacePlaceholders(value, properties));
             }
+            // 将properties的值设置到Config中去
             ConfigInitializer.initialize(properties, Config.class);
         } catch (Exception e) {
             logger.error(e, "Failed to read the config file, skywalking is going to run in default config.");
         }
 
         try {
+            // 使用系统属性覆盖Config
             overrideConfigBySystemProp();
         } catch (Exception e) {
             logger.error(e, "Failed to read the system properties.");
@@ -87,16 +102,17 @@ public class SnifferConfigInitializer {
             try {
                 agentOptions = agentOptions.trim();
                 logger.info("Agent options is {}.", agentOptions);
-
+                // 使用传入的参数覆盖Config
                 overrideConfigByAgentOptions(agentOptions);
             } catch (Exception e) {
                 logger.error(e, "Failed to parse the agent options, val is {}.", agentOptions);
             }
         }
-
+        // agent.service_name不能为空
         if (StringUtil.isEmpty(Config.Agent.SERVICE_NAME)) {
             throw new ExceptionInInitializerError("`agent.service_name` is missing.");
         }
+        // collector.backend_service不能为空
         if (StringUtil.isEmpty(Config.Collector.BACKEND_SERVICE)) {
             throw new ExceptionInInitializerError("`collector.backend_service` is missing.");
         }

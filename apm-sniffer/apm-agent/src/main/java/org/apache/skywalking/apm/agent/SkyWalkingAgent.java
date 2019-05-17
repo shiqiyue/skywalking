@@ -32,12 +32,18 @@ import org.apache.skywalking.apm.agent.core.conf.Config;
 import org.apache.skywalking.apm.agent.core.conf.SnifferConfigInitializer;
 import org.apache.skywalking.apm.agent.core.logging.api.ILog;
 import org.apache.skywalking.apm.agent.core.logging.api.LogManager;
-import org.apache.skywalking.apm.agent.core.plugin.*;
+import org.apache.skywalking.apm.agent.core.plugin.AbstractClassEnhancePluginDefine;
+import org.apache.skywalking.apm.agent.core.plugin.EnhanceContext;
+import org.apache.skywalking.apm.agent.core.plugin.PluginBootstrap;
+import org.apache.skywalking.apm.agent.core.plugin.PluginException;
+import org.apache.skywalking.apm.agent.core.plugin.PluginFinder;
 
 import java.lang.instrument.Instrumentation;
 import java.util.List;
 
-import static net.bytebuddy.matcher.ElementMatchers.*;
+import static net.bytebuddy.matcher.ElementMatchers.nameContains;
+import static net.bytebuddy.matcher.ElementMatchers.nameStartsWith;
+import static net.bytebuddy.matcher.ElementMatchers.not;
 
 /**
  * The main entrance of sky-walking agent, based on javaagent mechanism.
@@ -49,41 +55,44 @@ public class SkyWalkingAgent {
 
     /**
      * Main entrance. Use byte-buddy transform to enhance all classes, which define in plugins.
+     * 主入口
      *
      * @param agentArgs
      * @param instrumentation
      * @throws PluginException
      */
     public static void premain(String agentArgs, Instrumentation instrumentation) throws PluginException {
+        // 插件寻找器
         final PluginFinder pluginFinder;
         try {
+            // 设置配置信息导Config
             SnifferConfigInitializer.initialize(agentArgs);
-
+            // 初始化PluginFinder
             pluginFinder = new PluginFinder(new PluginBootstrap().loadPlugins());
 
         } catch (Exception e) {
             logger.error(e, "Skywalking agent initialized failure. Shutting down.");
             return;
         }
-
+        // 字节码增强工具
         final ByteBuddy byteBuddy = new ByteBuddy()
-            .with(TypeValidation.of(Config.Agent.IS_OPEN_DEBUGGING_CLASS));
+                .with(TypeValidation.of(Config.Agent.IS_OPEN_DEBUGGING_CLASS));
 
         new AgentBuilder.Default(byteBuddy)
-            .ignore(
-                nameStartsWith("net.bytebuddy.")
-                .or(nameStartsWith("org.slf4j."))
-                .or(nameStartsWith("org.apache.logging."))
-                .or(nameStartsWith("org.groovy."))
-                .or(nameContains("javassist"))
-                .or(nameContains(".asm."))
-                .or(nameStartsWith("sun.reflect"))
-                .or(allSkyWalkingAgentExcludeToolkit())
-                .or(ElementMatchers.<TypeDescription>isSynthetic()))
-            .type(pluginFinder.buildMatch())
-            .transform(new Transformer(pluginFinder))
-            .with(new Listener())
-            .installOn(instrumentation);
+                .ignore(
+                        nameStartsWith("net.bytebuddy.")
+                                .or(nameStartsWith("org.slf4j."))
+                                .or(nameStartsWith("org.apache.logging."))
+                                .or(nameStartsWith("org.groovy."))
+                                .or(nameContains("javassist"))
+                                .or(nameContains(".asm."))
+                                .or(nameStartsWith("sun.reflect"))
+                                .or(allSkyWalkingAgentExcludeToolkit())
+                                .or(ElementMatchers.<TypeDescription>isSynthetic()))
+                .type(pluginFinder.buildMatch())
+                .transform(new Transformer(pluginFinder))
+                .with(new Listener())
+                .installOn(instrumentation);
 
         try {
             ServiceManager.INSTANCE.boot();
@@ -92,7 +101,8 @@ public class SkyWalkingAgent {
         }
 
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-            @Override public void run() {
+            @Override
+            public void run() {
                 ServiceManager.INSTANCE.shutdown();
             }
         }, "skywalking service shutdown thread"));
@@ -107,7 +117,7 @@ public class SkyWalkingAgent {
 
         @Override
         public DynamicType.Builder<?> transform(DynamicType.Builder<?> builder, TypeDescription typeDescription,
-            ClassLoader classLoader, JavaModule module) {
+                                                ClassLoader classLoader, JavaModule module) {
             List<AbstractClassEnhancePluginDefine> pluginDefines = pluginFinder.find(typeDescription, classLoader);
             if (pluginDefines.size() > 0) {
                 DynamicType.Builder<?> newBuilder = builder;
@@ -142,7 +152,7 @@ public class SkyWalkingAgent {
 
         @Override
         public void onTransformation(TypeDescription typeDescription, ClassLoader classLoader, JavaModule module,
-            boolean loaded, DynamicType dynamicType) {
+                                     boolean loaded, DynamicType dynamicType) {
             if (logger.isDebugEnable()) {
                 logger.debug("On Transformation class {}.", typeDescription.getName());
             }
@@ -152,13 +162,13 @@ public class SkyWalkingAgent {
 
         @Override
         public void onIgnored(TypeDescription typeDescription, ClassLoader classLoader, JavaModule module,
-            boolean loaded) {
+                              boolean loaded) {
 
         }
 
         @Override
         public void onError(String typeName, ClassLoader classLoader, JavaModule module, boolean loaded,
-            Throwable throwable) {
+                            Throwable throwable) {
             logger.error("Enhance class " + typeName + " error.", throwable);
         }
 

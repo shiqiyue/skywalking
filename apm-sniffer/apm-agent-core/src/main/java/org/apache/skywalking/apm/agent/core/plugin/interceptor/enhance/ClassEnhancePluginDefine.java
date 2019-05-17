@@ -33,7 +33,11 @@ import org.apache.skywalking.apm.agent.core.logging.api.LogManager;
 import org.apache.skywalking.apm.agent.core.plugin.AbstractClassEnhancePluginDefine;
 import org.apache.skywalking.apm.agent.core.plugin.EnhanceContext;
 import org.apache.skywalking.apm.agent.core.plugin.PluginException;
-import org.apache.skywalking.apm.agent.core.plugin.interceptor.*;
+import org.apache.skywalking.apm.agent.core.plugin.interceptor.ConstructorInterceptPoint;
+import org.apache.skywalking.apm.agent.core.plugin.interceptor.DeclaredInstanceMethodsInterceptPoint;
+import org.apache.skywalking.apm.agent.core.plugin.interceptor.EnhanceException;
+import org.apache.skywalking.apm.agent.core.plugin.interceptor.InstanceMethodsInterceptPoint;
+import org.apache.skywalking.apm.agent.core.plugin.interceptor.StaticMethodsInterceptPoint;
 import org.apache.skywalking.apm.util.StringUtil;
 
 import static net.bytebuddy.jar.asm.Opcodes.ACC_PRIVATE;
@@ -70,8 +74,9 @@ public abstract class ClassEnhancePluginDefine extends AbstractClassEnhancePlugi
     protected DynamicType.Builder<?> enhance(TypeDescription typeDescription,
                                              DynamicType.Builder<?> newClassBuilder, ClassLoader classLoader,
                                              EnhanceContext context) throws PluginException {
+        // 增强类的静态方法
         newClassBuilder = this.enhanceClass(typeDescription, newClassBuilder, classLoader);
-
+        // 增强类的构造方法和实例方法
         newClassBuilder = this.enhanceInstance(typeDescription, newClassBuilder, classLoader, context);
 
         return newClassBuilder;
@@ -79,14 +84,14 @@ public abstract class ClassEnhancePluginDefine extends AbstractClassEnhancePlugi
 
     /**
      * Enhance a class to intercept constructors and class instance methods.
-     *
+     * 增加类的构造方法和实例方法
      * @param typeDescription target class description
      * @param newClassBuilder byte-buddy's builder to manipulate class bytecode.
      * @return new byte-buddy's builder for further manipulation.
      */
     private DynamicType.Builder<?> enhanceInstance(TypeDescription typeDescription,
-        DynamicType.Builder<?> newClassBuilder, ClassLoader classLoader,
-        EnhanceContext context) throws PluginException {
+                                                   DynamicType.Builder<?> newClassBuilder, ClassLoader classLoader,
+                                                   EnhanceContext context) throws PluginException {
         ConstructorInterceptPoint[] constructorInterceptPoints = getConstructorsInterceptPoints();
         InstanceMethodsInterceptPoint[] instanceMethodsInterceptPoints = getInstanceMethodsInterceptPoints();
         String enhanceOriginClassName = typeDescription.getTypeName();
@@ -118,8 +123,8 @@ public abstract class ClassEnhancePluginDefine extends AbstractClassEnhancePlugi
          */
         if (!context.isObjectExtended()) {
             newClassBuilder = newClassBuilder.defineField(CONTEXT_ATTR_NAME, Object.class, ACC_PRIVATE | ACC_VOLATILE)
-                .implement(EnhancedInstance.class)
-                .intercept(FieldAccessor.ofField(CONTEXT_ATTR_NAME));
+                    .implement(EnhancedInstance.class)
+                    .intercept(FieldAccessor.ofField(CONTEXT_ATTR_NAME));
             context.extendObjectCompleted();
         }
 
@@ -129,9 +134,9 @@ public abstract class ClassEnhancePluginDefine extends AbstractClassEnhancePlugi
         if (existedConstructorInterceptPoint) {
             for (ConstructorInterceptPoint constructorInterceptPoint : constructorInterceptPoints) {
                 newClassBuilder = newClassBuilder.constructor(constructorInterceptPoint.getConstructorMatcher()).intercept(SuperMethodCall.INSTANCE
-                    .andThen(MethodDelegation.withDefaultConfiguration()
-                        .to(new ConstructorInter(constructorInterceptPoint.getConstructorInterceptor(), classLoader))
-                    )
+                        .andThen(MethodDelegation.withDefaultConfiguration()
+                                .to(new ConstructorInter(constructorInterceptPoint.getConstructorInterceptor(), classLoader))
+                        )
                 );
             }
         }
@@ -151,21 +156,21 @@ public abstract class ClassEnhancePluginDefine extends AbstractClassEnhancePlugi
                 }
                 if (instanceMethodsInterceptPoint.isOverrideArgs()) {
                     newClassBuilder =
-                        newClassBuilder.method(junction)
-                            .intercept(
-                                MethodDelegation.withDefaultConfiguration()
-                                    .withBinders(
-                                        Morph.Binder.install(OverrideCallable.class)
-                                    )
-                                    .to(new InstMethodsInterWithOverrideArgs(interceptor, classLoader))
-                            );
+                            newClassBuilder.method(junction)
+                                    .intercept(
+                                            MethodDelegation.withDefaultConfiguration()
+                                                    .withBinders(
+                                                            Morph.Binder.install(OverrideCallable.class)
+                                                    )
+                                                    .to(new InstMethodsInterWithOverrideArgs(interceptor, classLoader))
+                                    );
                 } else {
                     newClassBuilder =
-                        newClassBuilder.method(junction)
-                            .intercept(
-                                MethodDelegation.withDefaultConfiguration()
-                                    .to(new InstMethodsInter(interceptor, classLoader))
-                            );
+                            newClassBuilder.method(junction)
+                                    .intercept(
+                                            MethodDelegation.withDefaultConfiguration()
+                                                    .to(new InstMethodsInter(interceptor, classLoader))
+                                    );
                 }
             }
         }
@@ -189,40 +194,46 @@ public abstract class ClassEnhancePluginDefine extends AbstractClassEnhancePlugi
 
     /**
      * Enhance a class to intercept class static methods.
+     * 增强类的静态方法
      *
      * @param typeDescription target class description
      * @param newClassBuilder byte-buddy's builder to manipulate class bytecode.
      * @return new byte-buddy's builder for further manipulation.
      */
     private DynamicType.Builder<?> enhanceClass(TypeDescription typeDescription,
-        DynamicType.Builder<?> newClassBuilder, ClassLoader classLoader) throws PluginException {
+                                                DynamicType.Builder<?> newClassBuilder, ClassLoader classLoader) throws PluginException {
+        // 获取静态方法拦截切点
         StaticMethodsInterceptPoint[] staticMethodsInterceptPoints = getStaticMethodsInterceptPoints();
+        // 获取类型
         String enhanceOriginClassName = typeDescription.getTypeName();
         if (staticMethodsInterceptPoints == null || staticMethodsInterceptPoints.length == 0) {
             return newClassBuilder;
         }
 
         for (StaticMethodsInterceptPoint staticMethodsInterceptPoint : staticMethodsInterceptPoints) {
+            // 获取切点的拦截器
             String interceptor = staticMethodsInterceptPoint.getMethodsInterceptor();
             if (StringUtil.isEmpty(interceptor)) {
                 throw new EnhanceException("no StaticMethodsAroundInterceptor define to enhance class " + enhanceOriginClassName);
             }
 
             if (staticMethodsInterceptPoint.isOverrideArgs()) {
+                // 如果isOverrideArgs为true，使用StaticMethodsInterWithOverrideArgs处理
                 newClassBuilder = newClassBuilder.method(isStatic().and(staticMethodsInterceptPoint.getMethodsMatcher()))
-                    .intercept(
-                        MethodDelegation.withDefaultConfiguration()
-                            .withBinders(
-                                Morph.Binder.install(OverrideCallable.class)
-                            )
-                            .to(new StaticMethodsInterWithOverrideArgs(interceptor))
-                    );
+                        .intercept(
+                                MethodDelegation.withDefaultConfiguration()
+                                        .withBinders(
+                                                Morph.Binder.install(OverrideCallable.class)
+                                        )
+                                        .to(new StaticMethodsInterWithOverrideArgs(interceptor))
+                        );
             } else {
+                // 如果isOverridArgs为false，使用StaticMethodsInter处理
                 newClassBuilder = newClassBuilder.method(isStatic().and(staticMethodsInterceptPoint.getMethodsMatcher()))
-                    .intercept(
-                        MethodDelegation.withDefaultConfiguration()
-                            .to(new StaticMethodsInter(interceptor))
-                    );
+                        .intercept(
+                                MethodDelegation.withDefaultConfiguration()
+                                        .to(new StaticMethodsInter(interceptor))
+                        );
             }
 
         }

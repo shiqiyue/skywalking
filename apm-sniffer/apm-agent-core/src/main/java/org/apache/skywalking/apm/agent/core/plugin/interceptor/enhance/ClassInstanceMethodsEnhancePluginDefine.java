@@ -26,7 +26,7 @@ import org.apache.skywalking.apm.agent.core.plugin.interceptor.StaticMethodsInte
  * ClassInstanceMethodsEnhancePluginDefine} has no differences with inherit from {@link ClassEnhancePluginDefine}. Just
  * override {@link ClassEnhancePluginDefine#getStaticMethodsInterceptPoints}, and return NULL, which means
  * nothing to enhance.
- *
+ * 只增强构造方法和实例方法
  * @author wusheng
  */
 public abstract class ClassInstanceMethodsEnhancePluginDefine extends ClassEnhancePluginDefine {

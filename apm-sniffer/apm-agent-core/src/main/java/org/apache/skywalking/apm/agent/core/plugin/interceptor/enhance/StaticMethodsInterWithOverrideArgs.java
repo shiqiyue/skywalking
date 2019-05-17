@@ -19,14 +19,15 @@
 
 package org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance;
 
-import java.lang.reflect.Method;
 import net.bytebuddy.implementation.bind.annotation.AllArguments;
 import net.bytebuddy.implementation.bind.annotation.Morph;
 import net.bytebuddy.implementation.bind.annotation.Origin;
 import net.bytebuddy.implementation.bind.annotation.RuntimeType;
-import org.apache.skywalking.apm.agent.core.plugin.loader.InterceptorInstanceLoader;
 import org.apache.skywalking.apm.agent.core.logging.api.ILog;
 import org.apache.skywalking.apm.agent.core.logging.api.LogManager;
+import org.apache.skywalking.apm.agent.core.plugin.loader.InterceptorInstanceLoader;
+
+import java.lang.reflect.Method;
 
 /**
  * The actual byte-buddy's interceptor to intercept class instance methods.
@@ -56,19 +57,19 @@ public class StaticMethodsInterWithOverrideArgs {
     /**
      * Intercept the target static method.
      *
-     * @param clazz target class
+     * @param clazz        target class
      * @param allArguments all method arguments
-     * @param method method description.
-     * @param zuper the origin call ref.
+     * @param method       method description.
+     * @param zuper        the origin call ref.
      * @return the return value of target static method.
      * @throws Exception only throw exception because of zuper.call() or unexpected exception in sky-walking ( This is a
-     * bug, if anything triggers this condition ).
+     *                   bug, if anything triggers this condition ).
      */
     @RuntimeType
     public Object intercept(@Origin Class<?> clazz, @AllArguments Object[] allArguments, @Origin Method method,
-        @Morph OverrideCallable zuper) throws Throwable {
+                            @Morph OverrideCallable zuper) throws Throwable {
         StaticMethodsAroundInterceptor interceptor = InterceptorInstanceLoader
-            .load(staticMethodsAroundInterceptorClassName, clazz.getClassLoader());
+                .load(staticMethodsAroundInterceptorClassName, clazz.getClassLoader());
 
         MethodInterceptResult result = new MethodInterceptResult();
         try {
@@ -82,6 +83,7 @@ public class StaticMethodsInterWithOverrideArgs {
             if (!result.isContinue()) {
                 ret = result._ret();
             } else {
+                //  调用静态方法， 传入allArguments
                 ret = zuper.call(allArguments);
             }
         } catch (Throwable t) {

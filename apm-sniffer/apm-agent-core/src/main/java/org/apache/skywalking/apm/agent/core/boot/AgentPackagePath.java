@@ -35,6 +35,11 @@ public class AgentPackagePath {
 
     private static File AGENT_PACKAGE_PATH;
 
+    /***
+     * 获取agent 文件夹的路径
+     * @return
+     * @throws AgentPackageNotFoundException
+     */
     public static File getPath() throws AgentPackageNotFoundException {
         if (AGENT_PACKAGE_PATH == null) {
             AGENT_PACKAGE_PATH = findPath();

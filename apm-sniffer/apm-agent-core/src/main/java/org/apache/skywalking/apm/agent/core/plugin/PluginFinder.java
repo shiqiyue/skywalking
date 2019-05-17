@@ -38,10 +38,13 @@ import static net.bytebuddy.matcher.ElementMatchers.not;
 /**
  * The <code>PluginFinder</code> represents a finder , which assist to find the one
  * from the given {@link AbstractClassEnhancePluginDefine} list.
- *
+ * <mark>插件寻找器</mark>
  * @author wusheng
  */
 public class PluginFinder {
+    /***
+     * 保存一个类，有几个类增强插件定义
+     */
     private final Map<String, LinkedList<AbstractClassEnhancePluginDefine>> nameMatchDefine = new HashMap<String, LinkedList<AbstractClassEnhancePluginDefine>>();
     private final List<AbstractClassEnhancePluginDefine> signatureMatchDefine = new LinkedList<AbstractClassEnhancePluginDefine>();
 
@@ -62,6 +65,7 @@ public class PluginFinder {
                 }
                 pluginDefines.add(plugin);
             } else {
+                // TODO ??
                 signatureMatchDefine.add(plugin);
             }
         }
